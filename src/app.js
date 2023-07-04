@@ -60,6 +60,37 @@ app.get('/users', async (req, res) => {
   }
 })
 
+//POST login
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  const loginSchema = joi.object({
+    email: joi.string().email().required(),
+    password: [
+      joi.string().required(), 
+      joi.number().required()
+    ]
+  });
+  const { error } = loginSchema.validate(req.body, { abortEarly: false });
+  if (error) return res.status(422).send(error.details.map(({ message }) => message));
+
+  try {
+    const registeredEmail = await db.collection('users').findOne({ email });
+    if (!registeredEmail) return res.sendStatus(404);
+    
+    const equalPassword = await db.collection('users').findOne({
+      $and: [{ email }, { password }]
+    });
+    if (!equalPassword) return res.sendStatus(401);
+
+    //implementar token
+    return res.send('token');
+
+  } catch ({ message }){
+    res.status(500).send(message);
+  }
+})
+
 
 //LISTEN
 app.listen(PORT, () => console.log(`Rodando em http://localhost:${PORT}`));
