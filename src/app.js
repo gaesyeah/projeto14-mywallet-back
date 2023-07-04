@@ -1,4 +1,5 @@
 import cors from 'cors';
+import dayjs from 'dayjs';
 import dotenv from 'dotenv';
 import express from 'express';
 import joi from 'joi';
@@ -48,7 +49,7 @@ app.post('/users', async (req, res) => {
   } catch ({ message }) {
     res.status(500).send(message);
   }
-})
+});
 
 //GET users
 app.get('/users', async (req, res) => {
@@ -58,7 +59,7 @@ app.get('/users', async (req, res) => {
   } catch ({ message }){
     res.status(500).send(message);
   }
-})
+});
 
 //POST login
 app.post('/login', async (req, res) => {
@@ -83,14 +84,44 @@ app.post('/login', async (req, res) => {
     });
     if (!equalPassword) return res.sendStatus(401);
 
-    //implementar token
+    //implementar token e enviar no send
     return res.send('token');
 
   } catch ({ message }){
     res.status(500).send(message);
   }
-})
+});
 
+//POST transactions
+app.post('/transactions/:type', async (req, res) => {
+  const { type } = req.params;
+
+  //implementar token para retornar um status 401(Unauthorized) se for o caso
+
+  const errorMessages = [];
+  //fiz a verificação de float sem a biblioteca joi pelos seguites motivos:
+  //https://github.com/hapijs/joi/issues/112
+  //https://github.com/hapijs/joi/issues/2699
+  if (Number.isInteger(req.body.value)) errorMessages.push('\"value\" must be a float');
+  
+  const transactionSchema = joi.object({
+    description: joi.string().required(),
+    value: joi.number().positive().required(), 
+    type: joi.string().valid('entry', 'exit').required()
+  });
+  const { error } = transactionSchema.validate({ ...req.body, type }, { abortEarly: false });
+  if (error) error.details.forEach(({ message }) => errorMessages.push(message));
+
+  if (errorMessages.length > 0) return res.status(422).send(errorMessages);
+
+  try {
+    await db.collection('transactions').insertOne({ ...req.body, type, date: dayjs(Date.now()).format('DD/MM')});
+    res.sendStatus(201);
+    
+  } catch ({ message }) {
+    res.status(500).send(message);
+  }
+});
 
 //LISTEN
 app.listen(PORT, () => console.log(`Rodando em http://localhost:${PORT}`));
