@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt';
 import cors from 'cors';
 import dayjs from 'dayjs';
 import dotenv from 'dotenv';
@@ -24,11 +25,11 @@ try {
 }
 const db = mongoClient.db();
 
-//POST users
-app.post('/users', async (req, res) => {
-  const { email } = req.body;
+//POST sign-up
+app.post('/sign-up', async (req, res) => {
+  const { name, email, password } = req.body;
   
-  const registerSchema = joi.object({
+  const signUpSchema = joi.object({
     name: joi.string().required(),
     email: joi.string().email().required(),
     password: [
@@ -36,14 +37,15 @@ app.post('/users', async (req, res) => {
       joi.number().required().min(3)
     ]
   });
-  const { error } = registerSchema.validate(req.body, { abortEarly: false });
+  const { error } = signUpSchema.validate(req.body, { abortEarly: false });
   if (error) return res.status(422).send(error.details.map(({ message }) => message));
 
   try {
     const emailAlreadyUsed = await db.collection('users').findOne({ email });
     if (emailAlreadyUsed) return res.sendStatus(409);
 
-    await db.collection('users').insertOne(req.body);
+    const hash = bcrypt.hashSync(password, 10);
+    await db.collection('users').insertOne({ name, email, password: hash});
     res.sendStatus(201);
     
   } catch ({ message }) {
@@ -61,30 +63,28 @@ app.get('/users', async (req, res) => {
   }
 });
 
-//POST login
-app.post('/login', async (req, res) => {
+//POST sign-in
+app.post('/sign-in', async (req, res) => {
   const { email, password } = req.body;
 
-  const loginSchema = joi.object({
+  const signInSchema = joi.object({
     email: joi.string().email().required(),
     password: [
       joi.string().required(), 
       joi.number().required()
     ]
   });
-  const { error } = loginSchema.validate(req.body, { abortEarly: false });
+  const { error } = signInSchema.validate(req.body, { abortEarly: false });
   if (error) return res.status(422).send(error.details.map(({ message }) => message));
 
   try {
-    const registeredEmail = await db.collection('users').findOne({ email });
-    if (!registeredEmail) return res.sendStatus(404);
+    const user = await db.collection('users').findOne({ email });
+    if (!user) return res.sendStatus(404);
     
-    const equalPassword = await db.collection('users').findOne({
-      $and: [{ email }, { password }]
-    });
-    if (!equalPassword) return res.sendStatus(401);
+    const rightPassword = bcrypt.compareSync(password, user.password);
+    if (!rightPassword) return res.sendStatus(401);
 
-    //implementar token e enviar no send
+    //implementar token e enviar para o front-end pelo send
     return res.send('token');
 
   } catch ({ message }){
@@ -96,7 +96,7 @@ app.post('/login', async (req, res) => {
 app.post('/transactions/:type', async (req, res) => {
   const { type } = req.params;
 
-  //implementar token para retornar um status 401(Unauthorized) se for o caso
+  //verificar o token(vindo do header) para retornar um status 401(Unauthorized) se for o caso
 
   const errorMessages = [];
   //fiz a verificação de float sem a biblioteca joi pelos seguites motivos:
@@ -121,6 +121,14 @@ app.post('/transactions/:type', async (req, res) => {
   } catch ({ message }) {
     res.status(500).send(message);
   }
+});
+
+//GET transactions
+app.get('/transactions', (req, res) => {
+
+  //verificar o token(vindo do header) para retornar um status 401(Unauthorized) se for o caso
+  //e será usado para fazer uma busca com find na collection 'transactions'
+
 });
 
 //LISTEN
