@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import joi from 'joi';
 import { MongoClient } from 'mongodb';
+import { v4 as uuid } from 'uuid';
 
 //configuração do servidor
 const app = express();
@@ -44,21 +45,11 @@ app.post('/sign-up', async (req, res) => {
     const emailAlreadyUsed = await db.collection('users').findOne({ email });
     if (emailAlreadyUsed) return res.sendStatus(409);
 
-    const hash = bcrypt.hashSync(password, 10);
-    await db.collection('users').insertOne({ name, email, password: hash});
+    const passwordHash = bcrypt.hashSync(password, 10);
+    await db.collection('users').insertOne({ name, email, password: passwordHash });
     res.sendStatus(201);
     
   } catch ({ message }) {
-    res.status(500).send(message);
-  }
-});
-
-//GET users
-app.get('/users', async (req, res) => {
-  try {
-    const users = await db.collection('users').find().toArray();
-    res.send(users);
-  } catch ({ message }){
     res.status(500).send(message);
   }
 });
@@ -84,8 +75,9 @@ app.post('/sign-in', async (req, res) => {
     const rightPassword = bcrypt.compareSync(password, user.password);
     if (!rightPassword) return res.sendStatus(401);
 
-    //implementar token e enviar para o front-end pelo send
-    return res.send('token');
+    const token = uuid();
+    await db.collection('sessions').insertOne({ token, idUser: user._id });
+    return res.send(token);
 
   } catch ({ message }){
     res.status(500).send(message);
@@ -95,8 +87,9 @@ app.post('/sign-in', async (req, res) => {
 //POST transactions
 app.post('/transactions/:type', async (req, res) => {
   const { type } = req.params;
+  const { authorization } = req.headers;
 
-  //verificar o token(vindo do header) para retornar um status 401(Unauthorized) se for o caso
+  if (!authorization) return res.sendStatus(401);
 
   const errorMessages = [];
   //fiz a verificação de float sem a biblioteca joi pelos seguites motivos:
@@ -115,7 +108,16 @@ app.post('/transactions/:type', async (req, res) => {
   if (errorMessages.length > 0) return res.status(422).send(errorMessages);
 
   try {
-    await db.collection('transactions').insertOne({ ...req.body, type, date: dayjs(Date.now()).format('DD/MM')});
+    const token = authorization.replace('Bearer ', '');
+    const session = await db.collection('sessions').findOne({ token });
+    if (!session) return res.sendStatus(401);
+
+    await db.collection('transactions').insertOne({ 
+      ...req.body,
+      type, 
+      date: Date.now(), 
+      idUser: session.idUser
+    });
     res.sendStatus(201);
     
   } catch ({ message }) {
@@ -124,10 +126,25 @@ app.post('/transactions/:type', async (req, res) => {
 });
 
 //GET transactions
-app.get('/transactions', (req, res) => {
+app.get('/transactions', async (req, res) => {
+  const { authorization } = req.headers;
+  if (!authorization) return res.sendStatus(401);
 
-  //verificar o token(vindo do header) para retornar um status 401(Unauthorized) se for o caso
-  //e será usado para fazer uma busca com find na collection 'transactions'
+  try {
+    const token = authorization.replace('Bearer ', '');
+    const session = await db.collection('sessions').findOne({ token });
+    if (!session) res.sendStatus(401);
+  
+    const transactions = await db.collection('transactions')
+      .find({ idUser: session.idUser })
+      .sort({ date:1 })
+      .toArray()
+    ;
+    res.send(transactions);
+    
+  } catch ({ message }) {
+    res.status(500).send(message);
+  }
 
 });
 
