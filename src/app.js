@@ -149,5 +149,18 @@ app.get('/transactions', async (req, res) => {
 
 });
 
+app.delete('/log-out', async (req, res) => {
+  const { authorization } = req.headers;
+
+  try {
+    const { deletedCount } = await db.collection('sessions').deleteOne({ token: authorization.replace('Bearer ', '') });
+    if (deletedCount === 0) return res.status(404).send('session not found');
+
+    res.send(200);
+  } catch ({ message }) {
+    res.status(500).send(message);
+  }
+});
+
 //LISTEN
 app.listen(PORT, () => console.log(`Rodando em http://localhost:${PORT}`));
