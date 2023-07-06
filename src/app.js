@@ -78,7 +78,7 @@ app.post('/sign-in', async (req, res) => {
     const token = uuid();
     await db.collection('sessions').insertOne({ token, idUser: user._id, name: user.name });
     const session = await db.collection('sessions').findOne({ token });
-    return res.send(session);
+    res.send(session);
 
   } catch ({ message }){
     res.status(500).send(message);
@@ -134,7 +134,7 @@ app.get('/transactions', async (req, res) => {
   try {
     const token = authorization.replace('Bearer ', '');
     const session = await db.collection('sessions').findOne({ token });
-    if (!session) res.sendStatus(401);
+    if (!session) return res.sendStatus(401);
   
     const transactions = await db.collection('transactions')
       .find({ idUser: session.idUser })
