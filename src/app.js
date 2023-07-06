@@ -76,7 +76,7 @@ app.post('/sign-in', async (req, res) => {
     if (!rightPassword) return res.sendStatus(401);
 
     const token = uuid();
-    await db.collection('sessions').insertOne({ token, idUser: user._id });
+    await db.collection('sessions').insertOne({ token, idUser: user._id, name: user.name });
     return res.send(token);
 
   } catch ({ message }){
@@ -115,7 +115,7 @@ app.post('/transactions/:type', async (req, res) => {
     await db.collection('transactions').insertOne({ 
       ...req.body,
       type, 
-      date: Date.now(), 
+      timeStamp: Date.now(), 
       idUser: session.idUser
     });
     res.sendStatus(201);
@@ -137,7 +137,7 @@ app.get('/transactions', async (req, res) => {
   
     const transactions = await db.collection('transactions')
       .find({ idUser: session.idUser })
-      .sort({ date:1 })
+      .sort({ timeStamp: 1 })
       .toArray()
     ;
     res.send(transactions);
