@@ -77,7 +77,8 @@ app.post('/sign-in', async (req, res) => {
 
     const token = uuid();
     await db.collection('sessions').insertOne({ token, idUser: user._id, name: user.name });
-    return res.send(token);
+    const session = await db.collection('sessions').findOne({ token });
+    return res.send(session);
 
   } catch ({ message }){
     res.status(500).send(message);
