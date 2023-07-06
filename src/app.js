@@ -43,7 +43,7 @@ app.post('/sign-up', async (req, res) => {
 
   try {
     const emailAlreadyUsed = await db.collection('users').findOne({ email });
-    if (emailAlreadyUsed) return res.sendStatus(409);
+    if (emailAlreadyUsed) return res.status(409).send('email already used');
 
     const passwordHash = bcrypt.hashSync(password, 10);
     await db.collection('users').insertOne({ name, email, password: passwordHash });
@@ -70,10 +70,10 @@ app.post('/sign-in', async (req, res) => {
 
   try {
     const user = await db.collection('users').findOne({ email });
-    if (!user) return res.sendStatus(404);
+    if (!user) return res.status(404).send('email not registered');
     
     const rightPassword = bcrypt.compareSync(password, user.password);
-    if (!rightPassword) return res.sendStatus(401);
+    if (!rightPassword) return res.status(401).send('wrong password');
 
     const token = uuid();
     await db.collection('sessions').insertOne({ token, idUser: user._id, name: user.name });
