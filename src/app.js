@@ -1,6 +1,5 @@
 import bcrypt from 'bcrypt';
 import cors from 'cors';
-import dayjs from 'dayjs';
 import dotenv from 'dotenv';
 import express from 'express';
 import joi from 'joi';
@@ -179,7 +178,30 @@ app.delete('/transactions/:id', async (req, res) => {
   } catch ({ message }) {
     res.status(500).send(message);
   }
-})
+});
+
+app.put('/transactions/:id', async (req, res) => {
+  const { id } = req.params;
+  const { value, description } = req.body;
+  const { authorization } = req.headers;
+  if (!authorization) return res.sendStatus(401);
+
+  try{
+    const token = authorization.replace('Bearer ', '');
+    const session = await db.collection('sessions').findOne({ token });
+    if (!session) return res.sendStatus(401);
+
+    const { matchedCount } = await db.collection('transactions').updateOne(
+      { _id : new ObjectId(id) },
+      { $set : { value, description } }
+    );
+    if (matchedCount === 0) return res.status(404).send('transaction not found');
+
+    res.status(202).send('edited');
+  } catch ({ message }) {
+    res.status(500).send(message);
+  }
+});
 
 //LISTEN
 app.listen(PORT, () => console.log(`Rodando em http://localhost:${PORT}`));
