@@ -25,4 +25,5 @@ export const db = mongoClient.db();
 app.use(indexRouter);
 
 //LISTEN
-app.listen(PORT, () => console.log(`Rodando em http://localhost:${PORT}`));
+const port = PORT || 5000;
+app.listen(port, () => console.log(`Rodando em http://localhost:${port}`));
