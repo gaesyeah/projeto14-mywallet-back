@@ -53,7 +53,7 @@ export const getTransactions = async (req, res) => {
   
     const transactions = await db.collection('transactions')
       .find({ idUser: session.idUser })
-      .sort({ timeStamp: 1 })
+      .sort({ timeStamp: -1 })
       .toArray()
     ;
     res.send(transactions);
