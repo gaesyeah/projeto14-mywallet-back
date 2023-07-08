@@ -1,9 +1,12 @@
 import { Router } from "express";
 import { deleteTransaction, getTransactions, postTransaction, putTransaction } from '../controllers/transaction.controller.js';
 import { schemaValidation } from "../middlewares/schemaValidation.middleware.js";
+import { userUnauthorized } from "../middlewares/userUnauthorized.middleware.js";
 import { transactionSchema } from "../schemas/schemas.js";
 
 const transactionsRouter = Router();
+
+transactionsRouter.use(userUnauthorized);
 
 transactionsRouter.post('/transactions/:type', schemaValidation(transactionSchema), postTransaction);
 transactionsRouter.get('/transactions', getTransactions);

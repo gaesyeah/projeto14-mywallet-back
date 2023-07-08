@@ -22,6 +22,7 @@ try {
 }
 export const db = mongoClient.db();
 
+//uso das rotas
 app.use(indexRouter);
 
 //LISTEN
