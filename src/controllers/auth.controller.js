@@ -5,17 +5,6 @@ import { db } from '../app.js';
 
 export const signUp = async (req, res) => {
   const { name, email, password } = req.body;
-  
-  const signUpSchema = joi.object({
-    name: joi.string().required(),
-    email: joi.string().email().required(),
-    password: [
-      joi.string().required().min(3), 
-      joi.number().required().min(3)
-    ]
-  });
-  const { error } = signUpSchema.validate(req.body, { abortEarly: false });
-  if (error) return res.status(422).send(error.details.map(({ message }) => message));
 
   try {
     const emailAlreadyUsed = await db.collection('users').findOne({ email });
@@ -32,16 +21,6 @@ export const signUp = async (req, res) => {
 
 export const signIn = async (req, res) => {
   const { email, password } = req.body;
-
-  const signInSchema = joi.object({
-    email: joi.string().email().required(),
-    password: [
-      joi.string().required(), 
-      joi.number().required()
-    ]
-  });
-  const { error } = signInSchema.validate(req.body, { abortEarly: false });
-  if (error) return res.status(422).send(error.details.map(({ message }) => message));
 
   try {
     const user = await db.collection('users').findOne({ email });

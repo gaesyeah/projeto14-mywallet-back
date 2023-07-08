@@ -1,4 +1,3 @@
-import joi from 'joi';
 import { ObjectId } from 'mongodb';
 import { db } from '../app.js';
 
@@ -8,21 +7,10 @@ export const postTransaction = async (req, res) => {
 
   if (!authorization) return res.sendStatus(401);
 
-  const errorMessages = [];
   //fiz a verificação de float sem a biblioteca joi pelos seguites motivos:
   //https://github.com/hapijs/joi/issues/112
   //https://github.com/hapijs/joi/issues/2699
-  if (Number.isInteger(req.body.value)) errorMessages.push('\"value\" must be a float');
-  
-  const transactionSchema = joi.object({
-    description: joi.string().required(),
-    value: joi.number().positive().required(), 
-    type: joi.string().valid('entry', 'exit').required()
-  });
-  const { error } = transactionSchema.validate({ ...req.body, type }, { abortEarly: false });
-  if (error) error.details.forEach(({ message }) => errorMessages.push(message));
-
-  if (errorMessages.length > 0) return res.status(422).send(errorMessages);
+  if (Number.isInteger(req.body.value)) return res.status(422).send('\"value\" must be a float');
 
   try {
     const token = authorization.replace('Bearer ', '');
